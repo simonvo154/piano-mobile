@@ -5,36 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Piano & Sax Mobile</title>
+    <title>Piano Neon Layer</title>
     <style>
         * { 
             box-sizing: border-box; touch-action: none; 
             -webkit-touch-callout: none; -webkit-user-select: none; 
             user-select: none; -webkit-tap-highlight-color: transparent; 
         }
-        body { background: #000; margin: 0; overflow: hidden; font-family: sans-serif; }
+        body { background: #000; margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         
+        /* Menu điều khiển chuyên nghiệp */
         .top-bar {
-            height: 25vh; display: flex; flex-direction: column; justify-content: center;
-            align-items: center; background: #1a1a1a; border-bottom: 2px solid #333; gap: 8px;
+            height: 20vh; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; background: linear-gradient(to bottom, #111, #000);
+            border-bottom: 1px solid #333; gap: 10px;
         }
         .row { display: flex; gap: 10px; align-items: center; }
 
         .btn {
-            background: #333; color: white; border: 1px solid #555; padding: 10px 15px;
-            border-radius: 8px; font-size: 13px; font-weight: bold;
+            background: #222; color: #aaa; border: 1px solid #444; padding: 10px 15px;
+            border-radius: 6px; font-size: 12px; font-weight: bold; transition: 0.2s;
         }
-        .btn.active { background: #ffd700; color: #000; border-color: #fff; }
-        .nav-btn { background: #444; font-size: 18px; padding: 8px 25px; border: 1px solid #ffd700; }
+        .btn.active { background: #00ffff; color: #000; border-color: #fff; box-shadow: 0 0 15px #00ffff; }
+        .layer-btn.active { background: #ff0055; color: #fff; box-shadow: 0 0 15px #ff0055; }
+        .nav-btn { font-size: 20px; color: #00ffff; }
 
-        .piano-container { width: 100vw; height: 75vh; overflow: hidden; position: relative; }
-        .piano-wrapper { display: flex; height: 100%; position: absolute; left: 0; transition: left 0.3s; }
+        /* Vùng hiển thị đàn */
+        .piano-container { width: 100vw; height: 80vh; overflow: hidden; position: relative; }
+        .piano-wrapper { display: flex; height: 100%; position: absolute; left: 0; transition: left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 
-        .white-key { display: inline-block; background: white; border: 1px solid #ccc; height: 100%; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; position: relative; z-index: 1; }
-        .white-key.active { background: #ffd700; }
-        .black-key { background: #222; position: absolute; z-index: 2; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; }
-        .black-key.active { background: #ff4444; }
-        .label { position: absolute; bottom: 10px; width: 100%; text-align: center; color: #888; font-size: 10px; }
+        /* Style phím Neon */
+        .white-key {
+            display: inline-block; background: #eee; border: 1px solid #999;
+            height: 100%; border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;
+            position: relative; z-index: 1; transition: all 0.1s;
+        }
+        .white-key.active { 
+            background: #fff; transform: translateY(5px);
+            box-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff;
+            z-index: 10;
+        }
+
+        .black-key {
+            background: #222; position: absolute; z-index: 2;
+            border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;
+            border: 1px solid #000; transition: all 0.1s;
+        }
+        .black-key.active { 
+            background: #ff0055; transform: translateY(3px);
+            box-shadow: 0 0 30px #ff0055, 0 0 60px #ff0055;
+            z-index: 11;
+        }
+
+        .label { position: absolute; bottom: 15px; width: 100%; text-align: center; color: #666; font-size: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -42,12 +65,13 @@
     <div class="top-bar">
         <div class="row">
             <button class="btn nav-btn" onclick="move(-1)">◀</button>
-            <button class="btn" id="pedalBtn">PEDAL: OFF</button>
+            <button class="btn" id="pedalBtn">SUSTAIN</button>
+            <button class="btn layer-btn" id="layerBtn" onclick="toggleLayer()">LAYER: OFF</button>
             <button class="btn nav-btn" onclick="move(1)">▶</button>
         </div>
         <div class="row">
             <button class="btn active" id="pBtn" onclick="setInst('piano')">PIANO</button>
-            <button class="btn" id="sBtn" onclick="setInst('sax')">SAXOPHONE</button>
+            <button class="btn" id="sBtn" onclick="setInst('sax')">SAX</button>
             <button class="btn" onclick="setZoom(8)">TO</button>
             <button class="btn" onclick="setZoom(12)">NHỎ</button>
         </div>
@@ -59,7 +83,7 @@
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let isSustain = false, visibleKeys = 12, offset = 0, instrument = 'piano', activePointers = new Set();
+        let isSustain = false, isLayer = false, visibleKeys = 10, offset = 0, instrument = 'piano', activePointers = new Set();
 
         const notes = [];
         const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -88,41 +112,43 @@
             });
         }
 
-        function play(f, el) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+        function createOsc(f, type, filterFreq, gainVal, detune = 0) {
             const osc = audioCtx.createOscillator(), g = audioCtx.createGain(), filter = audioCtx.createBiquadFilter();
-            
-            if (instrument === 'piano') {
-                osc.type = 'square'; // Piano dùng sóng vuông có lọc sẽ ấm hơn
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(1000, audioCtx.currentTime);
-                filter.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.5);
-                g.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (isSustain ? 2.5 : 0.8));
-            } else {
-                osc.type = 'sawtooth'; // Saxophone dùng sóng răng cưa
-                filter.type = 'bandpass';
-                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
-                g.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                g.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
-                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
-            }
-
-            osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+            osc.type = type; osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+            osc.detune.setValueAtTime(detune, audioCtx.currentTime);
+            filter.type = 'lowpass'; filter.frequency.setValueAtTime(filterFreq, audioCtx.currentTime);
+            g.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (isSustain ? 2.8 : 0.8));
             osc.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + 2.5);
-            el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 150);
+            osc.start(); osc.stop(audioCtx.currentTime + 3);
         }
 
+        function play(f, el) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            if (isLayer || instrument === 'piano') createOsc(f, 'square', 800, 0.3); // Tiếng Piano ấm
+            if (isLayer || instrument === 'sax') createOsc(f, 'sawtooth', 1200, 0.15, 5); // Tiếng Sax dày
+
+            el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 200);
+        }
+
+        function toggleLayer() { 
+            isLayer = !isLayer; 
+            const btn = document.getElementById('layerBtn');
+            btn.classList.toggle('active', isLayer);
+            btn.textContent = `LAYER: ${isLayer ? 'ON' : 'OFF'}`;
+        }
         function setInst(i) { 
-            instrument = i; 
+            instrument = i; isLayer = false;
+            document.getElementById('layerBtn').classList.remove('active');
+            document.getElementById('layerBtn').textContent = "LAYER: OFF";
             document.getElementById('pBtn').classList.toggle('active', i==='piano');
             document.getElementById('sBtn').classList.toggle('active', i==='sax');
         }
         function move(dir) { offset -= (window.innerWidth/visibleKeys*4)*dir; document.getElementById('pianoContent').style.left = offset+'px'; }
         function setZoom(z) { visibleKeys = z; render(); }
         window.onpointerup = (e) => activePointers.delete(e.pointerId);
-        document.getElementById('pedalBtn').onclick = function() { isSustain = !isSustain; this.textContent = `PEDAL: ${isSustain ? 'ON' : 'OFF'}`; this.classList.toggle('active'); };
+        document.getElementById('pedalBtn').onclick = function() { isSustain = !isSustain; this.classList.toggle('active'); };
         render();
     </script>
 </body>
