@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Piano Slide Pro</title>
+    <title>Piano Master Pro</title>
     <style>
         * { 
             box-sizing: border-box; touch-action: none; 
@@ -14,11 +14,11 @@
         }
         body { background: #000; margin: 0; overflow: hidden; font-family: sans-serif; }
         
+        /* Menu trên */
         .top-bar {
-            height: 20vh; display: flex; flex-direction: column; justify-content: center;
-            align-items: center; background: #1a1a1a; gap: 5px;
+            height: 15vh; display: flex; align-items: center; justify-content: space-around;
+            background: #1a1a1a; border-bottom: 1px solid #333;
         }
-        .row { display: flex; gap: 8px; }
 
         .btn {
             background: #333; color: white; border: 1px solid #555; padding: 10px 15px;
@@ -26,10 +26,16 @@
         }
         .btn.active { background: #ffd700; color: #000; }
 
+        /* Khu vực đàn chính */
         .piano-container {
-            width: 100vw; height: 80vh; overflow-x: auto; overflow-y: hidden;
-            position: relative; white-space: nowrap; -webkit-overflow-scrolling: touch;
+            width: 100vw; height: 75vh; overflow-x: auto; overflow-y: hidden;
+            position: relative; white-space: nowrap;
         }
+        /* Hiện thanh cuộn cho iPhone để dễ cầm kéo */
+        .piano-container::-webkit-scrollbar { height: 25px; display: block; }
+        .piano-container::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+        .piano-container::-webkit-scrollbar-track { background: #111; }
+
         .piano-wrapper { display: flex; height: 100%; position: relative; width: max-content; }
 
         .white-key {
@@ -37,10 +43,7 @@
             height: 100%; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
             position: relative; z-index: 1;
         }
-        .white-key.active { 
-            background: linear-gradient(to bottom, #fff, #ffd700); 
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
-        }
+        .white-key.active { background: #ffd700; }
 
         .black-key {
             background: #222; position: absolute; z-index: 2;
@@ -54,13 +57,10 @@
 <body>
 
     <div class="top-bar">
-        <div class="row">
-            <button class="btn" id="pedalBtn">PEDAL: OFF</button>
-            <button class="btn" onclick="setZoom(8)">TO</button>
-            <button class="btn" onclick="setZoom(12)">VỪA</button>
-            <button class="btn" onclick="setZoom(16)">NHỎ</button>
-        </div>
-        <div style="color: #666; font-size: 11px;">Mẹo: Nhấn giữ và vuốt ngang để luyến phím</div>
+        <button class="btn" id="pedalBtn">PEDAL: OFF</button>
+        <button class="btn" onclick="setZoom(8)">TO</button>
+        <button class="btn" onclick="setZoom(12)">VỪA</button>
+        <button class="btn" onclick="setZoom(16)">NHỎ</button>
     </div>
 
     <div class="piano-container" id="scrollArea">
@@ -71,9 +71,8 @@
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let isSustain = false;
         let visibleKeys = 12;
-        let isMoving = false; // Biến kiểm tra xem có đang nhấn chuột/tay không
+        let activePointers = new Set(); // Theo dõi các ngón tay đang chạm
 
-        // Dữ liệu nốt
         const notes = [];
         const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         for (let oct = 2; oct <= 6; oct++) {
@@ -96,10 +95,15 @@
                     k.style.width = `${wWidth}vw`;
                     k.innerHTML = `<div class="label">${note.n}</div>`;
                     
-                    // Xử lý vuốt phím
-                    k.onpointerdown = (e) => { isMoving = true; play(note.f, k); };
-                    k.onpointerenter = (e) => { if(isMoving) play(note.f, k); };
-                    k.onpointerup = () => { isMoving = false; };
+                    // Logic vuốt Đa điểm
+                    k.addEventListener('pointerdown', (e) => { 
+                        e.target.releasePointerCapture(e.pointerId); // Quan trọng để vuốt được
+                        activePointers.add(e.pointerId);
+                        play(note.f, k); 
+                    });
+                    k.addEventListener('pointerenter', (e) => { 
+                        if(activePointers.size > 0) play(note.f, k); 
+                    });
 
                     container.appendChild(k);
 
@@ -111,8 +115,15 @@
                         bk.style.height = `58%`;
                         bk.style.left = `${(wCount + 1) * wWidth - (wWidth * 0.325)}vw`;
                         
-                        bk.onpointerdown = (e) => { e.stopPropagation(); isMoving = true; play(next.f, bk); };
-                        bk.onpointerenter = (e) => { if(isMoving) play(next.f, bk); };
+                        bk.addEventListener('pointerdown', (e) => { 
+                            e.stopPropagation();
+                            e.target.releasePointerCapture(e.pointerId);
+                            activePointers.add(e.pointerId);
+                            play(next.f, bk); 
+                        });
+                        bk.addEventListener('pointerenter', (e) => { 
+                            if(activePointers.size > 0) play(next.f, bk); 
+                        });
                         
                         container.appendChild(bk);
                     }
@@ -121,8 +132,9 @@
             });
         }
 
-        // Lệnh reset khi nhấc tay ra ngoài vùng đàn
-        window.onpointerup = () => { isMoving = false; };
+        // Reset khi nhấc tay
+        window.addEventListener('pointerup', (e) => activePointers.delete(e.pointerId));
+        window.addEventListener('pointercancel', (e) => activePointers.delete(e.pointerId));
 
         function play(f, el) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
