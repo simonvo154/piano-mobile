@@ -5,32 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Piano Pro Sound & Rec</title>
+    <title>Crystal Piano Pro</title>
     <style>
         * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
-        body { background: #000; margin: 0; overflow: hidden; font-family: -apple-system, sans-serif; color: white; }
+        body { background: #050505; margin: 0; overflow: hidden; font-family: -apple-system, sans-serif; color: white; }
         
-        .top-bar { height: 20vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #111; border-bottom: 1px solid #333; gap: 8px; }
+        .top-bar { height: 18vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #111; border-bottom: 1px solid #333; gap: 8px; }
         .row { display: flex; gap: 8px; align-items: center; }
 
-        .btn { background: #222; color: #eee; border: 1px solid #444; padding: 10px 14px; border-radius: 8px; font-size: 11px; font-weight: bold; min-width: 60px; transition: 0.1s; }
-        .btn.active { background: #00ffff; color: #000; border-color: #fff; box-shadow: 0 0 10px #00ffff; }
+        .btn { background: #222; color: #eee; border: 1px solid #444; padding: 10px 14px; border-radius: 8px; font-size: 11px; font-weight: bold; min-width: 65px; transition: 0.1s; }
+        .btn.active { background: #00ffff; color: #000; border-color: #fff; box-shadow: 0 0 15px #00ffff; }
         
-        #recBtn.recording { background: #ff4444; color: white; animation: blink 1s infinite; border-color: #fff; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        #recBtn.recording { background: #ff4444; color: white; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
 
-        .piano-container { width: 100vw; height: 80vh; overflow: hidden; position: relative; }
+        .piano-container { width: 100vw; height: 82vh; overflow: hidden; position: relative; }
         .piano-wrapper { display: flex; height: 100%; position: absolute; left: 0; transition: left 0.3s ease-out; }
 
-        /* PHÍM TRẮNG - CRYSTAL FORM */
-        .white-key { display: inline-block; background: #fff; border: 1px solid #ccc; height: 100%; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; position: relative; z-index: 1; transition: transform 0.1s; }
-        .white-key.active { background: #e0ffff; transform: translateY(5px); box-shadow: inset 0 0 25px #00ffff; border-color: #00ffff; z-index: 10; }
+        .white-key { display: inline-block; background: #fff; border: 1px solid #ccc; height: 100%; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; position: relative; z-index: 1; }
+        .white-key.active { background: #f0ffff; transform: translateY(4px); box-shadow: inset 0 0 20px #00ffff; border-color: #00ffff; z-index: 10; }
 
-        /* PHÍM ĐEN */
         .black-key { background: #222; position: absolute; z-index: 2; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; border: 1px solid #000; }
-        .black-key.active { background: #ff0055; box-shadow: 0 0 15px #ff0055; transform: translateY(3px); z-index: 11; }
+        .black-key.active { background: #ff0055; box-shadow: 0 0 20px #ff0055; transform: translateY(2px); z-index: 11; }
         
-        .label { position: absolute; bottom: 12px; width: 100%; text-align: center; color: #999; font-size: 10px; font-weight: bold; pointer-events: none; }
+        .label { position: absolute; bottom: 12px; width: 100%; text-align: center; color: #bbb; font-size: 10px; font-weight: bold; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -43,8 +41,8 @@
         </div>
         <div class="row">
             <button class="btn" onclick="move(-1)">◀</button>
-            <button class="btn" id="z8" onclick="setZoom(8)">TO</button>
-            <button class="btn active" id="z12" onclick="setZoom(12)">VỪA</button>
+            <button class="btn" id="z10" onclick="setZoom(10)">TO</button>
+            <button class="btn active" id="z14" onclick="setZoom(14)">VỪA</button>
             <button class="btn" onclick="move(1)">▶</button>
         </div>
     </div>
@@ -54,20 +52,18 @@
     </div>
 
     <script>
-        // KHỞI TẠO ÂM THANH CHUYÊN NGHIỆP
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const masterGain = audioCtx.createGain();
         const compressor = audioCtx.createDynamicsCompressor();
 
-        // Cấu hình Compressor chống rè cho tai nghe
-        compressor.threshold.setValueAtTime(-20, audioCtx.currentTime);
-        compressor.knee.setValueAtTime(30, audioCtx.currentTime);
-        compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+        // Chống rè nhưng giữ độ sáng
+        compressor.threshold.setValueAtTime(-15, audioCtx.currentTime);
+        compressor.ratio.setValueAtTime(4, audioCtx.currentTime);
         compressor.connect(masterGain);
-        masterGain.gain.value = 0.6;
+        masterGain.gain.value = 0.5;
         masterGain.connect(audioCtx.destination);
 
-        let isSustain = false, visibleKeys = 12, offset = 0, activePointers = new Set();
+        let isSustain = false, visibleKeys = 14, offset = 0, activePointers = new Set();
         let isRecording = false, startTime = 0, recordedData = [];
 
         const notes = [];
@@ -87,7 +83,7 @@
                     const next = notes[i+1];
                     if (next && next.n.includes('#')) {
                         const bk = document.createElement('div'); bk.className = 'black-key'; bk.id = "key-"+next.n.replace('#','s');
-                        bk.style.width = (kw*0.65)+'px'; bk.style.height='58%'; bk.style.left = ((wCount+1)*kw - (kw*0.325))+'px';
+                        bk.style.width = (kw*0.68)+'px'; bk.style.height='58%'; bk.style.left = ((wCount+1)*kw - (kw*0.34))+'px';
                         bk.onpointerdown = (e) => { e.stopPropagation(); e.target.releasePointerCapture(e.pointerId); activePointers.add(e.pointerId); handlePress(next, bk); };
                         bk.onpointerenter = () => { if(activePointers.size > 0) handlePress(next, bk); };
                         container.appendChild(bk);
@@ -102,47 +98,48 @@
             if (isRecording) recordedData.push({ f: note.f, id: el.id, time: Date.now() - startTime });
         }
 
-        // HÀM TẠO TIẾNG PIANO THẬT (REAL PIANO SYNTHESIZER)
+        // --- HÀM TẠO TIẾNG PIANO THANH & SÁNG ---
         function play(f, el) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const now = audioCtx.currentTime;
 
-            // Lớp 1: Sine Wave (Độ dày trầm của thân đàn)
-            const osc1 = audioCtx.createOscillator();
-            const g1 = audioCtx.createGain();
-            osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(f, now);
-
-            // Lớp 2: Square Wave + Lowpass Filter (Tiếng búa gõ)
-            const osc2 = audioCtx.createOscillator();
-            const g2 = audioCtx.createGain();
+            const osc = audioCtx.createOscillator();
+            const oscHarmonic = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
             const filter = audioCtx.createBiquadFilter();
-            osc2.type = 'square';
-            osc2.frequency.setValueAtTime(f, now);
-            osc2.detune.setValueAtTime(2, now); // Lệch nhẹ để nghe mộc hơn
 
+            // Sóng Triangle: Thanh mảnh và trong trẻo hơn Sine
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, now);
+
+            // Bồi âm cao: Giúp tiếng Piano "sáng" và "long lanh"
+            oscHarmonic.type = 'sine';
+            oscHarmonic.frequency.setValueAtTime(f * 2, now); // Cao hơn 1 quãng tám
+
+            // Bộ lọc Lowpass mở rộng (Sáng hơn nhiều bản cũ)
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(2000, now);
-            filter.frequency.exponentialRampToValueAtTime(120, now + 1.2);
+            filter.frequency.setValueAtTime(4500, now); // Để dải âm cao đi qua nhiều hơn
+            filter.Q.setValueAtTime(1, now);
 
-            // ADSR - Âm lượng tắt dần tự nhiên
-            g1.gain.setValueAtTime(0, now);
-            g1.gain.linearRampToValueAtTime(0.4, now + 0.01);
-            g1.gain.exponentialRampToValueAtTime(0.01, now + (isSustain ? 3.0 : 1.0));
+            // Cấu hình ADSR cho tiếng "nảy" (Bright Attack)
+            g.gain.setValueAtTime(0, now);
+            g.gain.linearRampToValueAtTime(0.7, now + 0.005); // Tấn công cực nhanh
+            g.gain.exponentialRampToValueAtTime(0.3, now + 0.1); // Giảm nhẹ sau khi gõ
+            g.gain.exponentialRampToValueAtTime(0.01, now + (isSustain ? 3.5 : 1.2)); // Vang lâu hơn bản cũ
 
-            g2.gain.setValueAtTime(0, now);
-            g2.gain.linearRampToValueAtTime(0.15, now + 0.01);
-            g2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.connect(filter);
+            oscHarmonic.connect(filter);
+            filter.connect(g);
+            g.connect(compressor);
 
-            osc1.connect(g1); g1.connect(compressor);
-            osc2.connect(filter); filter.connect(g2); g2.connect(compressor);
-
-            osc1.start(now); osc2.start(now);
-            osc1.stop(now + 4); osc2.stop(now + 4);
+            osc.start(now);
+            oscHarmonic.start(now);
+            osc.stop(now + 4);
+            oscHarmonic.stop(now + 4);
 
             if (el) {
                 el.classList.add('active');
-                setTimeout(() => el.classList.remove('active'), 250);
+                setTimeout(() => el.classList.remove('active'), 200);
             }
         }
 
@@ -160,7 +157,7 @@
 
         function playback() {
             const data = JSON.parse(localStorage.getItem('piano_save'));
-            if (!data || data.length === 0) return alert("Chưa có bản ghi!");
+            if (!data || data.length === 0) return;
             data.forEach(item => {
                 setTimeout(() => {
                     const el = document.getElementById(item.id);
@@ -170,12 +167,14 @@
         }
 
         function toggleSustain() { isSustain = !isSustain; document.getElementById('pedalBtn').classList.toggle('active', isSustain); }
-        function move(dir) { offset -= (window.innerWidth/visibleKeys*4)*dir; document.getElementById('pianoContent').style.left = offset+'px'; }
-        function setZoom(z) { 
-            visibleKeys = z; render(); 
-            document.querySelectorAll('.row .btn').forEach(b => { if(b.id && b.id.startsWith('z')) b.classList.remove('active'); });
-            document.getElementById('z'+z).classList.add('active');
+        function move(dir) { 
+            const step = (window.innerWidth/visibleKeys*4);
+            offset -= step*dir; 
+            const max = -(document.getElementById('pianoContent').offsetWidth - window.innerWidth);
+            if (offset > 0) offset = 0; if (offset < max) offset = max;
+            document.getElementById('pianoContent').style.left = offset+'px'; 
         }
+        function setZoom(z) { visibleKeys = z; render(); document.querySelectorAll('.row .btn').forEach(b => { if(b.id && b.id.startsWith('z')) b.classList.toggle('active', b.id === 'z'+z); }); }
         window.onpointerup = (e) => activePointers.delete(e.pointerId);
         window.onresize = render;
         render();
