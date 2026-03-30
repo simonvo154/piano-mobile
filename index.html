@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Piano Pro Mobile</title>
+    <title>Piano & Sax Mobile</title>
     <style>
         * { 
             box-sizing: border-box; touch-action: none; 
@@ -14,60 +14,42 @@
         }
         body { background: #000; margin: 0; overflow: hidden; font-family: sans-serif; }
         
-        /* Bảng điều khiển */
         .top-bar {
             height: 25vh; display: flex; flex-direction: column; justify-content: center;
-            align-items: center; background: #1a1a1a; border-bottom: 2px solid #333; gap: 10px;
+            align-items: center; background: #1a1a1a; border-bottom: 2px solid #333; gap: 8px;
         }
-        .row { display: flex; gap: 15px; align-items: center; }
+        .row { display: flex; gap: 10px; align-items: center; }
 
         .btn {
-            background: #333; color: white; border: 1px solid #555; padding: 12px 20px;
-            border-radius: 8px; font-size: 14px; font-weight: bold;
+            background: #333; color: white; border: 1px solid #555; padding: 10px 15px;
+            border-radius: 8px; font-size: 13px; font-weight: bold;
         }
         .btn.active { background: #ffd700; color: #000; border-color: #fff; }
-        .nav-btn { background: #444; font-size: 20px; padding: 10px 30px; border: 2px solid #ffd700; }
+        .nav-btn { background: #444; font-size: 18px; padding: 8px 25px; border: 1px solid #ffd700; }
 
-        /* Vùng hiển thị đàn */
-        .piano-container {
-            width: 100vw; height: 75vh; overflow: hidden; /* Khóa cuộn tự do để ưu tiên vuốt phím */
-            position: relative; background: #000;
-        }
-        .piano-wrapper { 
-            display: flex; height: 100%; position: absolute; left: 0; top: 0;
-            transition: left 0.3s ease-out; /* Hiệu ứng trượt mượt khi bấm nút */
-        }
+        .piano-container { width: 100vw; height: 75vh; overflow: hidden; position: relative; }
+        .piano-wrapper { display: flex; height: 100%; position: absolute; left: 0; transition: left 0.3s; }
 
-        .white-key {
-            display: inline-block; background: white; border: 1px solid #ccc;
-            height: 100%; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
-            position: relative; z-index: 1;
-        }
-        .white-key.active { background: #ffd700; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); }
-
-        .black-key {
-            background: #222; position: absolute; z-index: 2;
-            border-bottom-left-radius: 5px; border-bottom-right-radius: 5px;
-            border: 1px solid #000;
-        }
+        .white-key { display: inline-block; background: white; border: 1px solid #ccc; height: 100%; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; position: relative; z-index: 1; }
+        .white-key.active { background: #ffd700; }
+        .black-key { background: #222; position: absolute; z-index: 2; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; }
         .black-key.active { background: #ff4444; }
-
-        .label { position: absolute; bottom: 10px; width: 100%; text-align: center; color: #888; font-size: 11px; pointer-events: none; }
+        .label { position: absolute; bottom: 10px; width: 100%; text-align: center; color: #888; font-size: 10px; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
         <div class="row">
-            <button class="btn nav-btn" onclick="movePiano(-1)">◀</button>
+            <button class="btn nav-btn" onclick="move(-1)">◀</button>
             <button class="btn" id="pedalBtn">PEDAL: OFF</button>
-            <button class="btn nav-btn" onclick="movePiano(1)">▶</button>
+            <button class="btn nav-btn" onclick="move(1)">▶</button>
         </div>
         <div class="row">
-            <span style="color:#aaa; font-size:12px;">SIZE:</span>
-            <button class="btn" id="z8" onclick="setZoom(8)">TO</button>
-            <button class="btn id="z12" onclick="setZoom(12)">VỪA</button>
-            <button class="btn id="z15" onclick="setZoom(15)">NHỎ</button>
+            <button class="btn active" id="pBtn" onclick="setInst('piano')">PIANO</button>
+            <button class="btn" id="sBtn" onclick="setInst('sax')">SAXOPHONE</button>
+            <button class="btn" onclick="setZoom(8)">TO</button>
+            <button class="btn" onclick="setZoom(12)">NHỎ</button>
         </div>
     </div>
 
@@ -77,113 +59,71 @@
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let isSustain = false;
-        let visibleKeys = 12; // Số phím hiển thị
-        let currentOffset = 0; // Vị trí hiện tại (pixel)
-        let activePointers = new Set();
+        let isSustain = false, visibleKeys = 12, offset = 0, instrument = 'piano', activePointers = new Set();
 
         const notes = [];
         const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        for (let oct = 2; oct <= 6; oct++) {
-            names.forEach(n => {
-                const freq = 440 * Math.pow(2, ( (oct-4) + (names.indexOf(n)-9)/12 ));
-                notes.push({ n: n + oct, f: freq });
-            });
-        }
+        for (let oct = 2; oct <= 6; oct++) names.forEach(n => notes.push({ n: n + oct, f: 440 * Math.pow(2, ( (oct-4) + (names.indexOf(n)-9)/12 )) }));
 
         function render() {
-            const container = document.getElementById('pianoContent');
-            container.innerHTML = '';
-            const keyWidth = window.innerWidth / visibleKeys;
-            let wCount = 0;
-
+            const container = document.getElementById('pianoContent'); container.innerHTML = '';
+            const kw = window.innerWidth / visibleKeys; let wCount = 0;
             notes.forEach((note, i) => {
                 if (!note.n.includes('#')) {
-                    const k = document.createElement('div');
-                    k.className = 'white-key';
-                    k.style.width = `${keyWidth}px`;
+                    const k = document.createElement('div'); k.className = 'white-key'; k.style.width = kw+'px';
                     k.innerHTML = `<div class="label">${note.n}</div>`;
-                    
-                    k.addEventListener('pointerdown', (e) => { 
-                        e.target.releasePointerCapture(e.pointerId);
-                        activePointers.add(e.pointerId);
-                        play(note.f, k); 
-                    });
-                    k.addEventListener('pointerenter', (e) => { if(activePointers.size > 0) play(note.f, k); });
+                    k.onpointerdown = (e) => { e.target.releasePointerCapture(e.pointerId); activePointers.add(e.pointerId); play(note.f, k); };
+                    k.onpointerenter = () => { if(activePointers.size > 0) play(note.f, k); };
                     container.appendChild(k);
-
                     const next = notes[i+1];
                     if (next && next.n.includes('#')) {
-                        const bk = document.createElement('div');
-                        bk.className = 'black-key';
-                        bk.style.width = `${keyWidth * 0.65}px`;
-                        bk.style.height = `58%`;
-                        bk.style.left = `${(wCount + 1) * keyWidth - (keyWidth * 0.325)}px`;
-                        
-                        bk.addEventListener('pointerdown', (e) => { 
-                            e.stopPropagation();
-                            e.target.releasePointerCapture(e.pointerId);
-                            activePointers.add(e.pointerId);
-                            play(next.f, bk); 
-                        });
-                        bk.addEventListener('pointerenter', (e) => { if(activePointers.size > 0) play(next.f, bk); });
+                        const bk = document.createElement('div'); bk.className = 'black-key';
+                        bk.style.width = kw*0.65+'px'; bk.style.height = '58%'; bk.style.left = (wCount+1)*kw - (kw*0.325)+'px';
+                        bk.onpointerdown = (e) => { e.stopPropagation(); e.target.releasePointerCapture(e.pointerId); activePointers.add(e.pointerId); play(next.f, bk); };
+                        bk.onpointerenter = () => { if(activePointers.size > 0) play(next.f, bk); };
                         container.appendChild(bk);
                     }
                     wCount++;
                 }
             });
-            // Reset vị trí khi đổi size
-            container.style.left = "0px";
-            currentOffset = 0;
         }
 
         function play(f, el) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            osc.type = 'triangle';
+            const osc = audioCtx.createOscillator(), g = audioCtx.createGain(), filter = audioCtx.createBiquadFilter();
+            
+            if (instrument === 'piano') {
+                osc.type = 'square'; // Piano dùng sóng vuông có lọc sẽ ấm hơn
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.5);
+                g.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (isSustain ? 2.5 : 0.8));
+            } else {
+                osc.type = 'sawtooth'; // Saxophone dùng sóng răng cưa
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+                g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                g.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
+                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
+            }
+
             osc.frequency.setValueAtTime(f, audioCtx.currentTime);
-            const d = isSustain ? 2.5 : 0.7;
-            g.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
-            osc.connect(g); g.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + d);
-            el.classList.add('active');
-            setTimeout(() => el.classList.remove('active'), 150);
+            osc.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 2.5);
+            el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 150);
         }
 
-        function setZoom(z) {
-            visibleKeys = z;
-            render();
-            // Highlight nút đang chọn
-            document.querySelectorAll('.row .btn').forEach(b => b.classList.remove('active'));
-            if(z==8) document.getElementById('z8').classList.add('active');
+        function setInst(i) { 
+            instrument = i; 
+            document.getElementById('pBtn').classList.toggle('active', i==='piano');
+            document.getElementById('sBtn').classList.toggle('active', i==='sax');
         }
-
-        function movePiano(dir) {
-            const container = document.getElementById('pianoContent');
-            const step = (window.innerWidth / visibleKeys) * 3; // Di chuyển 3 phím mỗi lần bấm
-            currentOffset -= (step * dir);
-            
-            // Giới hạn không cho trượt quá đà
-            const maxScroll = -(container.offsetWidth - window.innerWidth);
-            if (currentOffset > 0) currentOffset = 0;
-            if (currentOffset < maxScroll) currentOffset = maxScroll;
-            
-            container.style.left = currentOffset + "px";
-        }
-
-        window.addEventListener('pointerup', (e) => activePointers.delete(e.pointerId));
-        window.addEventListener('pointercancel', (e) => activePointers.delete(e.pointerId));
-
-        document.getElementById('pedalBtn').onclick = function() {
-            isSustain = !isSustain;
-            this.textContent = `PEDAL: ${isSustain ? 'ON' : 'OFF'}`;
-            this.classList.toggle('active');
-        };
-
+        function move(dir) { offset -= (window.innerWidth/visibleKeys*4)*dir; document.getElementById('pianoContent').style.left = offset+'px'; }
+        function setZoom(z) { visibleKeys = z; render(); }
+        window.onpointerup = (e) => activePointers.delete(e.pointerId);
+        document.getElementById('pedalBtn').onclick = function() { isSustain = !isSustain; this.textContent = `PEDAL: ${isSustain ? 'ON' : 'OFF'}`; this.classList.toggle('active'); };
         render();
-        window.onresize = render; // Vẽ lại nếu xoay màn hình
     </script>
 </body>
 </html>
