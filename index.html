@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Piano Studio Mobile</title>
+    <style>
+        * { box-sizing: border-box; touch-action: none; user-select: none; }
+        body { background: #1a1a1a; margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        
+        /* Container đàn Piano */
+        .piano {
+            display: flex;
+            width: 100vw;
+            height: 70vh;
+            background: #000;
+            position: relative;
+            padding: 0 2px;
+        }
+
+        /* Phím trắng */
+        .white-key {
+            flex: 1;
+            background: white;
+            border: 1px solid #ccc;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .white-key:active, .white-key.active { background: #FFD700; }
+
+        /* Phím đen */
+        .black-key {
+            width: 3.5vw;
+            height: 45vh;
+            background: #333;
+            position: absolute;
+            z-index: 2;
+            border-bottom-left-radius: 3px;
+            border-bottom-right-radius: 3px;
+            margin-left: -1.75vw; /* Căn giữa giữa 2 phím trắng */
+        }
+
+        .black-key:active, .black-key.active { background: #FF4444; }
+
+        /* Bảng điều khiển */
+        .controls {
+            height: 30vh;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            color: white;
+            padding: 10px;
+        }
+        
+        .btn {
+            background: #444; color: white; border: none; padding: 15px 25px;
+            border-radius: 8px; font-weight: bold; cursor: pointer;
+        }
+        .btn.active { background: #00FF00; color: black; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button class="btn" id="pedalBtn">SUSTAIN: OFF</button>
+        <div id="status">CHẾ ĐỘ MOBILE</div>
+    </div>
+
+    <div class="piano" id="piano"></div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let isSustain = false;
+
+        // Dữ liệu nốt nhạc (Quãng 4 và 5 để dễ chơi trên điện thoại)
+        const notes = [
+            {n: 'C4', f: 261.63}, {n: 'C#4', f: 277.18}, {n: 'D4', f: 293.66}, {n: 'D#4', f: 311.13},
+            {n: 'E4', f: 329.63}, {n: 'F4', f: 349.23}, {n: 'F#4', f: 369.99}, {n: 'G4', f: 392.00},
+            {n: 'G#4', f: 415.30}, {n: 'A4', f: 440.00}, {n: 'A#4', f: 466.16}, {n: 'B4', f: 493.88},
+            {n: 'C5', f: 523.25}, {n: 'C#5', f: 554.37}, {n: 'D5', f: 587.33}, {n: 'D#5', f: 622.25},
+            {n: 'E5', f: 659.25}, {n: 'F5', f: 698.46}, {n: 'F#5', f: 739.99}, {n: 'G5', f: 783.99}
+        ];
+
+        const piano = document.getElementById('piano');
+        const pedalBtn = document.getElementById('pedalBtn');
+
+        // Vẽ phím
+        notes.forEach((note, index) => {
+            if (!note.n.includes('#')) {
+                const key = document.createElement('div');
+                key.className = 'white-key';
+                key.dataset.note = note.n;
+                key.addEventListener('pointerdown', () => playNote(note.f, key));
+                piano.appendChild(key);
+
+                // Nếu nốt tiếp theo là nốt đen, vẽ nó đè lên
+                const nextNote = notes[index + 1];
+                if (nextNote && nextNote.n.includes('#')) {
+                    const bKey = document.createElement('div');
+                    bKey.className = 'black-key';
+                    // Tính toán vị trí phím đen
+                    const pos = (piano.querySelectorAll('.white-key').length) * (100 / 12); 
+                    bKey.style.left = `${pos}%`;
+                    bKey.addEventListener('pointerdown', (e) => {
+                        e.stopPropagation();
+                        playNote(nextNote.f, bKey);
+                    });
+                    piano.appendChild(bKey);
+                }
+            }
+        });
+
+        function playNote(freq, element) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'triangle'; // Tiếng êm hơn sine
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            const duration = isSustain ? 3.0 : 0.8;
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+
+            // Hiệu ứng đổi màu
+            element.classList.add('active');
+            setTimeout(() => element.classList.remove('active'), 200);
+        }
+
+        // Điều khiển Pedal
+        pedalBtn.addEventListener('click', () => {
+            isSustain = !isSustain;
+            pedalBtn.textContent = `SUSTAIN: ${isSustain ? 'ON' : 'OFF'}`;
+            pedalBtn.classList.toggle('active');
+        });
+    </script>
+</body>
+</html>
