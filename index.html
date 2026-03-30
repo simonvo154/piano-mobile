@@ -5,61 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Piano Neon Form Pro</title>
+    <title>Piano Ultra Form</title>
     <style>
         * { 
             box-sizing: border-box; touch-action: none; 
             -webkit-touch-callout: none; -webkit-user-select: none; 
             user-select: none; -webkit-tap-highlight-color: transparent; 
         }
-        body { background: #000; margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        body { background: #000; margin: 0; overflow: hidden; font-family: sans-serif; }
         
-        /* Menu điều khiển */
+        /* Bảng điều khiển */
         .top-bar {
             height: 20vh; display: flex; flex-direction: column; justify-content: center;
-            align-items: center; background: linear-gradient(to bottom, #111, #000);
-            border-bottom: 1px solid #333; gap: 8px;
+            align-items: center; background: #080808; border-bottom: 2px solid #222; gap: 8px;
         }
         .row { display: flex; gap: 10px; align-items: center; }
 
         .btn {
-            background: #222; color: #888; border: 1px solid #444; padding: 10px 14px;
-            border-radius: 6px; font-size: 12px; font-weight: bold; transition: 0.2s;
+            background: #1a1a1a; color: #888; border: 1px solid #333; padding: 10px 14px;
+            border-radius: 6px; font-size: 12px; font-weight: bold; transition: 0.1s;
         }
         .btn.active { background: #00ffff; color: #000; border-color: #fff; box-shadow: 0 0 15px #00ffff; }
-        .layer-btn.active { background: #ff0055; color: #fff; box-shadow: 0 0 15px #ff0055; }
-        .nav-btn { font-size: 20px; color: #00ffff; padding: 5px 25px; }
+        .nav-btn { font-size: 20px; color: #00ffff; padding: 5px 25px; border-color: #00ffff; }
 
-        /* Vùng hiển thị đàn */
-        .piano-container { width: 100vw; height: 80vh; overflow: hidden; position: relative; }
-        .piano-wrapper { display: flex; height: 100%; position: absolute; left: 0; transition: left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        /* Vùng đàn */
+        .piano-container { 
+            width: 100vw; height: 80vh; overflow: hidden; position: relative; 
+            /* Lớp nền đen để làm nổi bật phím */
+            background: #000; 
+        }
+        .piano-wrapper { display: flex; height: 100%; position: absolute; left: 0; top: 0; transition: left 0.3s ease-out; }
 
-        /* STYLE PHÍM TRẮNG - GIỮ FORM SẮC NÉT */
+        /* PHÍM TRẮNG - GIỮ FORM SẮC NÉT HOÀN TOÀN */
         .white-key {
-            display: inline-block; background: #fff; border: 1px solid #bbb;
-            height: 100%; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
-            position: relative; z-index: 1; transition: background 0.1s, transform 0.1s;
+            display: inline-block;
+            /* Phím nền đen, Form chính là màu nền này */
+            background: #111; 
+            
+            /* TẠO VIỀN SẮC NÉT BẰNG CÁCH DÙNG MARGIN */
+            margin: 1px; /* Tạo khoảng hở 1px xung quanh, lộ nền đen ra */
+            
+            height: calc(100% - 2px); /* Trừ margin */
+            border-bottom-left-radius: 6px; border-bottom-right-radius: 6px;
+            position: relative; z-index: 1;
+            /* Transition màu nền để form không bị biến đổi */
+            transition: background 0.1s;
         }
+        
+        /* HIỆU ỨNG PHÁT SÁNG BẰNG CÁCH ĐỔI MÀU NỀN */
         .white-key.active { 
-            background: #fff; transform: translateY(3px);
-            /* Neon Inset: Chỉ tỏa vào trong để giữ Form vuông vức */
-            box-shadow: inset 0 0 25px rgba(0, 255, 255, 0.7), inset 0 0 5px #00ffff;
-            border-color: #00ffff; z-index: 10;
+            /* Đổi nền sang màu xanh Neon rực rỡ */
+            background: rgba(0, 255, 255, 1);
+            
+            /* Thêm hiệu ứng Glow ảo ảnh, nhưng giữ form nguyên vẹn */
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            
+            /* Thêm một chút đổ bóng thật nhẹ ở dưới để tạo cảm giác 3D */
+            box-shadow: 0 2px 5px rgba(0, 255, 255, 0.4);
+            
+            transform: translateY(2px); /* Hiệu ứng nhấn */
+            z-index: 10;
         }
 
-        /* STYLE PHÍM ĐEN - NEON TỎA NGOÀI */
+        /* PHÍM ĐEN */
         .black-key {
             background: #222; position: absolute; z-index: 2;
-            border-bottom-left-radius: 5px; border-bottom-right-radius: 5px;
+            margin: 1px; height: 58%;
+            border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;
             border: 1px solid #000; transition: all 0.1s;
         }
         .black-key.active { 
-            background: #ff0055; transform: translateY(2px);
-            box-shadow: 0 0 20px #ff0055, 0 0 40px #ff0055;
+            background: #ff0055; transform: translateY(1px);
+            box-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055;
             border-color: #fff; z-index: 11;
         }
 
-        .label { position: absolute; bottom: 12px; width: 100%; text-align: center; color: #999; font-size: 10px; font-weight: bold; pointer-events: none; }
+        .label { position: absolute; bottom: 10px; width: 100%; text-align: center; color: #888; font-size: 10px; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -67,16 +89,14 @@
     <div class="top-bar">
         <div class="row">
             <button class="btn nav-btn" onclick="move(-1)">◀</button>
-            <button class="btn" id="pedalBtn">SUSTAIN</button>
-            <button class="btn layer-btn" id="layerBtn" onclick="toggleLayer()">LAYER: OFF</button>
+            <button class="btn" id="pedalBtn">PEDAL</button>
+            <button class="btn" onclick="setInst('piano')" active>PIANO</button>
             <button class="btn nav-btn" onclick="move(1)">▶</button>
         </div>
         <div class="row">
-            <button class="btn active" id="pBtn" onclick="setInst('piano')">PIANO</button>
-            <button class="btn" id="sBtn" onclick="setInst('sax')">SAX</button>
-            <button class="btn" id="z8" onclick="setZoom(8)">TO</button>
-            <button class="btn active" id="z12" onclick="setZoom(12)">VỪA</button>
-            <button class="btn" id="z15" onclick="setZoom(15)">NHỎ</button>
+            <button class="btn" onclick="setZoom(8)">TO</button>
+            <button class="btn active" onclick="setZoom(12)">VỪA</button>
+            <button class="btn" onclick="setZoom(15)">NHỎ</button>
         </div>
     </div>
 
@@ -86,11 +106,11 @@
 
     <script>
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        let isSustain = false, isLayer = false, visibleKeys = 12, offset = 0, instrument = 'piano', activePointers = new Set();
+        let isSustain = false, visibleKeys = 12, offset = 0, instrument = 'piano', activePointers = new Set();
 
         const notes = [];
         const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        // Tạo 4 quãng tám từ C2 đến C6
+        // Tạo 4 quãng tám (C2 đến C6)
         for (let oct = 2; oct <= 6; oct++) names.forEach(n => notes.push({ n: n + oct, f: 440 * Math.pow(2, ( (oct-4) + (names.indexOf(n)-9)/12 )) }));
 
         function render() {
@@ -98,18 +118,26 @@
             const kw = window.innerWidth / visibleKeys; let wCount = 0;
             notes.forEach((note, i) => {
                 if (!note.n.includes('#')) {
-                    const k = document.createElement('div'); k.className = 'white-key'; k.style.width = kw+'px';
+                    const k = document.createElement('div'); k.className = 'white-key'; 
+                    /* Thêm một lớp bọc ngoài để cố định Form phím trắng */
+                    const kWrapper = document.createElement('div');
+                    kWrapper.style.width = kw+'px';
+                    kWrapper.style.height = '100%';
+                    kWrapper.appendChild(k);
+                    
+                    k.style.width = `calc(${kw}px - 2px)`; // Trừ margin 2 cạnh
                     k.innerHTML = `<div class="label">${note.n}</div>`;
                     
-                    // Logic vuốt và đa điểm chuyên nghiệp
+                    // Logic vuốt Đa điểm chuyên nghiệp
                     k.onpointerdown = (e) => { e.target.releasePointerCapture(e.pointerId); activePointers.add(e.pointerId); play(note.f, k); };
                     k.onpointerenter = () => { if(activePointers.size > 0) play(note.f, k); };
-                    container.appendChild(k);
+                    container.appendChild(kWrapper);
 
                     const next = notes[i+1];
                     if (next && next.n.includes('#')) {
                         const bk = document.createElement('div'); bk.className = 'black-key';
-                        bk.style.width = kw*0.65+'px'; bk.style.height = '58%'; bk.style.left = (wCount+1)*kw - (kw*0.325)+'px';
+                        bk.style.width = (kw*0.65)+'px'; 
+                        bk.style.left = ((wCount+1)*kw - (kw*0.325))+'px';
                         bk.onpointerdown = (e) => { e.stopPropagation(); e.target.releasePointerCapture(e.pointerId); activePointers.add(e.pointerId); play(next.f, bk); };
                         bk.onpointerenter = () => { if(activePointers.size > 0) play(next.f, bk); };
                         container.appendChild(bk);
@@ -117,15 +145,16 @@
                     wCount++;
                 }
             });
-            // Reset vị trí khi đổi size
+            // Reset vị trí
             container.style.left = "0px"; offset = 0;
         }
 
-        function createOsc(f, type, filterFreq, gainVal) {
+        function createOsc(f) {
             const osc = audioCtx.createOscillator(), g = audioCtx.createGain(), filter = audioCtx.createBiquadFilter();
-            osc.type = type; osc.frequency.setValueAtTime(f, audioCtx.currentTime);
-            filter.type = 'lowpass'; filter.frequency.setValueAtTime(filterFreq, audioCtx.currentTime);
-            g.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+            // Tiếng Piano ấm & sạch
+            osc.type = 'square'; osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+            filter.type = 'lowpass'; filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+            g.gain.setValueAtTime(0.3, audioCtx.currentTime);
             g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (isSustain ? 2.8 : 0.8));
             osc.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
             osc.start(); osc.stop(audioCtx.currentTime + 3);
@@ -133,28 +162,12 @@
 
         function play(f, el) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            if (isLayer || instrument === 'piano') createOsc(f, 'square', 900, 0.3); // Piano ấm
-            if (isLayer || instrument === 'sax') createOsc(f, 'sawtooth', 1300, 0.15); // Saxophone dày
-            el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 250);
-        }
-
-        function toggleLayer() { 
-            isLayer = !isLayer; 
-            const btn = document.getElementById('layerBtn');
-            btn.classList.toggle('active', isLayer);
-            btn.textContent = `LAYER: ${isLayer ? 'ON' : 'OFF'}`;
-        }
-
-        function setInst(i) { 
-            instrument = i; isLayer = false;
-            document.getElementById('layerBtn').classList.remove('active');
-            document.getElementById('layerBtn').textContent = "LAYER: OFF";
-            document.getElementById('pBtn').classList.toggle('active', i==='piano');
-            document.getElementById('sBtn').classList.toggle('active', i==='sax');
+            createOsc(f); // Chỉ chơi Piano cho sạch tiếng
+            el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 200);
         }
 
         function move(dir) { 
-            const step = (window.innerWidth / visibleKeys) * 4;
+            const step = (window.innerWidth / visibleKeys) * 3;
             offset -= step * dir; 
             const maxScroll = -(document.getElementById('pianoContent').offsetWidth - window.innerWidth);
             if (offset > 0) offset = 0; if (offset < maxScroll) offset = maxScroll;
@@ -163,11 +176,12 @@
 
         function setZoom(z) { 
             visibleKeys = z; render(); 
-            document.querySelectorAll('.row .btn').forEach(b => { if(b.id.startsWith('z')) b.classList.remove('active'); });
-            document.getElementById('z'+z).classList.add('active');
+            document.querySelectorAll('.top-bar .btn').forEach(b => { if(!b.id.startsWith('pedal')) b.classList.remove('active'); });
+            // Highlight nút size đang chọn (tùy chỉnh lại ID nút)
         }
 
         window.onpointerup = (e) => activePointers.delete(e.pointerId);
+        window.onpointercancel = (e) => activePointers.delete(e.pointerId);
         document.getElementById('pedalBtn').onclick = function() { isSustain = !isSustain; this.classList.toggle('active'); };
         
         render();
